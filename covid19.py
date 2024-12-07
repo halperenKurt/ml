@@ -119,10 +119,3 @@ for col in numeric_columns:
     negative_count = (data[col] < 0).sum()
     print(f"Final check - number of negative values in '{col}': {negative_count}")
 
-# Selecting the 0 values in Active
-rows_to_drop = data[(data['Active'] == 0)]
-
-# Deleting the rows where Active == 0
-data = data.drop(rows_to_drop.index)
-
-print("Veri kümesinin yeni şekli:", data.shape)
