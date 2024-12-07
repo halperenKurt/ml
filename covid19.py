@@ -71,15 +71,18 @@ else:
 print("Train dataset shape:", data.shape)
 print("Test dataset shape:", test_data.shape)
 
+data_cleaned = data.dropna(subset=["Lat", "Long_","Incident_Rate", "Case_Fatality_Ratio"])
+data_cleaned = data_cleaned.drop(columns=["FIPS","Admin2","Province_State"])
+
 # Count and percentage of zero values in the "Active" column
-active_zeros_count = (data['Active'] == 0).sum()
-active_zeros_percentage = (active_zeros_count / len(data)) * 100
+active_zeros_count = (data_cleaned['Active'] == 0).sum()
+active_zeros_percentage = (active_zeros_count / len(data_cleaned)) * 100
 
 print("Number of zeros in the 'Active' column:", active_zeros_count)
 print("Percentage of zeros in the 'Active' column:", active_zeros_percentage)
 
 # Filter rows where "Active" is zero
-zero_active_cases = data[data['Active'] == 0]
+zero_active_cases = data_cleaned[data_cleaned['Active'] == 0]
 
 # Summary of "Confirmed," "Deaths," and "Recovered" columns
 relation_summary = zero_active_cases[['Confirmed', 'Deaths', 'Recovered']].describe()
@@ -87,35 +90,36 @@ print("Summary of 'Confirmed,' 'Deaths,' and 'Recovered' columns (0 active cases
 print(relation_summary)
 
 # Identify inconsistencies in the "Active" column
-calculated_active = data['Confirmed'] - (data['Deaths'] + data['Recovered'])
-inconsistencies = data[data['Active'] != calculated_active]
+calculated_active = data_cleaned['Confirmed'] - (data_cleaned['Deaths'] + data_cleaned['Recovered'])
+inconsistencies = data_cleaned[data_cleaned['Active'] != calculated_active]
 print(f"Number of inconsistent values: {len(inconsistencies)}")
 
 # Correct inconsistent values
-data['Active'] = calculated_active
+data_cleaned['Active'] = calculated_active
 
 # Check for negative values in numeric columns
 numeric_columns = ['Confirmed', 'Deaths', 'Recovered', 'Active']
 for col in numeric_columns:
-    negative_count = (data[col] < 0).sum()
+    negative_count = (data_cleaned[col] < 0).sum()
     if negative_count > 0:
         print(f"Number of negative values in '{col}': {negative_count}")
 
 # Clip negative values to zero
-data[['Confirmed', 'Deaths', 'Recovered', 'Active']] = data[['Confirmed', 'Deaths', 'Recovered', 'Active']].clip(lower=0)
+data_cleaned[['Confirmed', 'Deaths', 'Recovered', 'Active']] = data_cleaned[['Confirmed', 'Deaths', 'Recovered', 'Active']].clip(lower=0)
 
 # Fix rows where "Deaths + Recovered > Confirmed"
-data.loc[data['Deaths'] + data['Recovered'] > data['Confirmed'], 'Confirmed'] = data['Deaths'] + data['Recovered']
+data_cleaned.loc[data_cleaned['Deaths'] + data_cleaned['Recovered'] > data_cleaned['Confirmed'], 'Confirmed'] = data_cleaned['Deaths'] + data_cleaned['Recovered']
 
 # Recalculate the "Active" column
-data['Active'] = data['Confirmed'] - (data['Deaths'] + data['Recovered'])
+data_cleaned['Active'] = data_cleaned['Confirmed'] - (data_cleaned['Deaths'] + data_cleaned['Recovered'])
 
 # Final check for inconsistencies
-inconsistencies = data[data['Active'] != calculated_active]
+inconsistencies = data_cleaned[data_cleaned['Active'] != calculated_active]
 print(f"Number of inconsistencies after final correction: {len(inconsistencies)}")
 
 # Check for negative values again
 for col in numeric_columns:
-    negative_count = (data[col] < 0).sum()
+    negative_count = (data_cleaned[col] < 0).sum()
     print(f"Final check - number of negative values in '{col}': {negative_count}")
 
+print(data_cleaned.head())
