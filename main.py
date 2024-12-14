@@ -1,14 +1,10 @@
 import joblib
 import pandas as pd
 import numpy as np
-from lightgbm import LGBMClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
-from sklearn.svm import SVC
-from sklearn.tree import DecisionTreeClassifier
-from xgboost import XGBClassifier
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -132,7 +128,9 @@ def prepare_test_data(dataframe):
 
         return cat_cols, num_cols, cat_but_car
 
-    dataframe = dataframe.dropna(subset=["Incident_Rate", "Case_Fatality_Ratio"])
+    columns_to_fill = ['Incident_Rate', 'Case_Fatality_Ratio']
+    dataframe[columns_to_fill] = dataframe[columns_to_fill].fillna(dataframe[columns_to_fill].mean())
+    #dataframe = dataframe.dropna(subset=["Incident_Rate", "Case_Fatality_Ratio"])
 
     # Drop unnecessary columns
     dataframe = dataframe.drop(columns=["FIPS", "Admin2", "Last_Update", "Province_State", "Lat", "Long_", "Combined_Key", "Country_Region"])
@@ -223,18 +221,18 @@ def main():
     df_test = pd.read_csv("datasets/test_data.csv")
     covid19_eda(df_train)
     X_train, y_train = train_data_prep(df_train)
-    X_test, y_test = prepare_test_data(df_test)
     base_models(X_train, y_train , scoring="accuracy")
     best_models = hyperparameter_optimization(X_train, y_train)
     voting_clf = voting_classifier(best_models, X_train, y_train)
     joblib.dump(voting_clf, "voting_covid19_clf.pkl")
     predictions = predict_test("datasets/test_data.csv", "voting_covid19_clf.pkl")
-    print("Test Veri Seti Tahminleri:")
-    print(predictions)
+    df_test["Covid_Threat_Level"] = predictions
+    df_test.to_csv("test_data_predict.csv", index=False)
+    print("Predictions saved")
     return voting_clf
 
 if __name__ == "__main__":
-    print("İşlem başladı")
+    print("Covid Threat Prediction starts")
     main()
 
 
