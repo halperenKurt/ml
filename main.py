@@ -110,7 +110,7 @@ def covid19_eda(dataframe):
     correlation_matrix(dataframe, num_cols)
 
 def train_data_prep(dataframe):
-    # Sütunları kategorik ve sayısal olarak ayıran yardımcı fonksiyon
+    # Helper function that separates columns into categorical and numerical
     def grab_col_names(dataframe, cat_th=10, car_th=20):
         cat_cols = [col for col in dataframe.columns if dataframe[col].dtypes == "O"]
         num_but_cat = [col for col in dataframe.columns if dataframe[col].nunique() < cat_th and dataframe[col].dtypes != "O"]
@@ -123,23 +123,19 @@ def train_data_prep(dataframe):
 
         return cat_cols, num_cols, cat_but_car
 
-    # Eksik değerleri temizle
     dataframe = dataframe.dropna(subset=["Incident_Rate", "Case_Fatality_Ratio"])
-
-    # Gereksiz sütunları kaldır
     dataframe = dataframe.drop(columns=["FIPS", "Admin2", "Last_Update", "Province_State", "Lat", "Long_", "Combined_Key", "Country_Region"])
 
-    # Sayısal sütunları standardize et
+    # standardization
     cat_cols, num_cols, cat_but_car = grab_col_names(dataframe)
     sc = StandardScaler()
     dataframe[num_cols] = sc.fit_transform(dataframe[num_cols])
 
-    # KMeans ile gruplama yaparak 'Covid_Threat_Level' sütunu ekle
+    # Add 'Covid_Threat_Level' column by clustering by KMeans
     kmeans = KMeans(n_clusters=5, random_state=42)
     dataframe['Covid_Threat_Level'] = kmeans.fit_predict(dataframe[num_cols])
     dataframe['Covid_Threat_Level'] = dataframe['Covid_Threat_Level'] + 1
 
-    # Özellikler (X) ve hedef (y) olarak ayır
     X = dataframe.drop(["Covid_Threat_Level"], axis=1)
     y = dataframe["Covid_Threat_Level"]
 
@@ -147,7 +143,7 @@ def train_data_prep(dataframe):
 
 
 def prepare_test_data(dataframe):
-
+    # Helper function that separates columns into categorical and numerical
     def grab_col_names(dataframe, cat_th=5, car_th=10):
         # cat_cols, cat_but_car
         cat_cols = [col for col in dataframe.columns if dataframe[col].dtypes == "O"]
@@ -198,7 +194,7 @@ def base_models(X, y, scoring="roc_auc"):
         cv_results = cross_validate(classifier, X, y, cv=3, scoring=scoring)
         print(f"{scoring} (Before): {round(cv_results['test_score'].mean(), 4)} ({name}) ")
 
-
+#best parameters according to hyperparameter optimization
 knn_params = {"n_neighbors": [3]}
 
 rf_params = {
@@ -230,7 +226,7 @@ def hyperparameter_optimization(X, y, cv=3, scoring="accuracy"):
         best_models[name] = final_model
     return best_models
 
-
+#ensemble modeling 
 def voting_classifier(best_models, X, y):
     print("Voting Classifier...")
 
@@ -243,7 +239,7 @@ def voting_classifier(best_models, X, y):
     print(f"Accuracy: {cv_results['test_accuracy'].mean()}")
     return voting_clf
 
-
+#predict the test dataset
 def predict_test(test_file_path, model_file_path):
     df_test = pd.read_csv(test_file_path)
     X_test, y_test = prepare_test_data(df_test)
@@ -251,7 +247,7 @@ def predict_test(test_file_path, model_file_path):
     voting_clf = joblib.load(model_file_path)
     predictions = voting_clf.predict(X_test)
     return predictions
-
+#pipeline
 def main():
     df_train = pd.read_csv("datasets/final_data.csv")
     df_test = pd.read_csv("datasets/test_data.csv")
